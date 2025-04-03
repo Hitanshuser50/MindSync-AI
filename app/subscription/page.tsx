@@ -60,10 +60,6 @@ export default function SubscriptionPage() {
       console.error("Error processing subscription:", error)
 
       toast({
-        title: "Subscription failed",\
-        description: "Faile  error)
-      
-      toast({
         title: "Subscription failed",
         description: "Failed to process your subscription. Please try again later.",
         variant: "destructive",
