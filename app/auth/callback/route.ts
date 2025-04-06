@@ -9,6 +9,9 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = createRouteHandlerClient({ cookies })
     await supabase.auth.exchangeCodeForSession(code)
+
+    // After successful authentication, redirect to the dashboard or saved redirect path
+    // The auth provider will handle the specific redirection via localStorage
   }
 
   // URL to redirect to after sign in process completes

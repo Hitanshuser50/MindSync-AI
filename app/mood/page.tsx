@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Plus, CalendarIcon, BarChart, List, AlertCircle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { format, parseISO, isToday, isYesterday, subDays } from "date-fns"
+import { format, parseISO, subDays } from "date-fns"
 
 // Mood options with emojis and colors
 const moodOptions = [
@@ -27,7 +27,7 @@ const moodOptions = [
 type MoodEntry = {
   id: string
   user_id: string
-  mood: string
+  mood_score: number // Changed from 'mood' to 'mood_score'
   notes: string
   created_at: string
 }
@@ -48,7 +48,7 @@ export default function MoodTrackerPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push("/login")
+      router.push("/auth")
       return
     }
 
@@ -91,9 +91,29 @@ export default function MoodTrackerPage() {
       setIsSubmitting(true)
       setError(null)
 
+      // Convert mood string to score (1-5)
+      let mood_score = 3 // Default to neutral
+      switch (selectedMood) {
+        case "awful":
+          mood_score = 1
+          break
+        case "bad":
+          mood_score = 2
+          break
+        case "okay":
+          mood_score = 3
+          break
+        case "good":
+          mood_score = 4
+          break
+        case "great":
+          mood_score = 5
+          break
+      }
+
       const newEntry = {
         user_id: user?.id,
-        mood: selectedMood,
+        mood_score: mood_score, // Changed from 'mood' to 'mood_score'
         notes: notes.trim(),
         created_at: new Date().toISOString(),
       }
@@ -111,7 +131,7 @@ export default function MoodTrackerPage() {
         title: "Mood logged successfully",
         description: "Your mood has been recorded.",
       })
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error adding mood entry:", error)
       setError("Failed to save your mood. Please try again.")
 
@@ -125,26 +145,49 @@ export default function MoodTrackerPage() {
     }
   }
 
-  const getMoodEmoji = (mood: string) => {
-    const option = moodOptions.find((option) => option.value === mood)
-    return option ? option.emoji : "😐"
+  const getMoodEmoji = (score: number) => {
+    switch (score) {
+      case 1:
+        return "😢"
+      case 2:
+        return "😔"
+      case 3:
+        return "😐"
+      case 4:
+        return "🙂"
+      case 5:
+        return "😄"
+      default:
+        return "😐"
+    }
   }
 
-  const getMoodColor = (mood: string) => {
-    const option = moodOptions.find((option) => option.value === mood)
-    return option ? option.color : "bg-gray-100 border-gray-300 text-gray-700"
+  const getMoodText = (score: number) => {
+    switch (score) {
+      case 1:
+        return "Awful"
+      case 2:
+        return "Bad"
+      case 3:
+        return "Okay"
+      case 4:
+        return "Good"
+      case 5:
+        return "Great"
+      default:
+        return "Neutral"
+    }
   }
 
   const formatEntryDate = (dateString: string) => {
-    const date = parseISO(dateString)
-
-    if (isToday(date)) {
-      return `Today, ${format(date, "h:mm a")}`
-    } else if (isYesterday(date)) {
-      return `Yesterday, ${format(date, "h:mm a")}`
-    } else {
-      return format(date, "MMM d, yyyy 'at' h:mm a")
-    }
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+    })
   }
 
   // Get entries for the selected date
@@ -179,7 +222,26 @@ export default function MoodTrackerPage() {
     }
 
     recentEntries.forEach((entry) => {
-      distribution[entry.mood as keyof typeof distribution]++
+      // Map mood_score to mood string
+      let mood = "okay" // Default
+      switch (entry.mood_score) {
+        case 1:
+          mood = "awful"
+          break
+        case 2:
+          mood = "bad"
+          break
+        case 3:
+          mood = "okay"
+          break
+        case 4:
+          mood = "good"
+          break
+        case 5:
+          mood = "great"
+          break
+      }
+      distribution[mood as keyof typeof distribution]++
     })
 
     return distribution
@@ -330,17 +392,16 @@ export default function MoodTrackerPage() {
                     <Card>
                       <CardContent className="p-4">
                         <div className="flex items-start gap-4">
-                          <div
-                            className={`flex items-center justify-center w-12 h-12 rounded-full ${getMoodColor(entry.mood)}`}
-                          >
-                            <span className="text-2xl">{getMoodEmoji(entry.mood)}</span>
-                          </div>
+                          <div className="text-2xl">{getMoodEmoji(entry.mood_score)}</div>
                           <div className="flex-1">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                              <h3 className="font-semibold capitalize">{entry.mood}</h3>
-                              <p className="text-xs text-muted-foreground">{formatEntryDate(entry.created_at)}</p>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
+                              <span className="font-medium text-lg">{getMoodText(entry.mood_score)}</span>
+                              <span className="text-sm text-muted-foreground flex items-center mt-1 sm:mt-0">
+                                <Calendar className="h-4 w-4 mr-1" />
+                                {formatEntryDate(entry.created_at)}
+                              </span>
                             </div>
-                            {entry.notes && <p className="text-sm text-muted-foreground">{entry.notes}</p>}
+                            {entry.notes && <p className="text-sm text-foreground mt-2">{entry.notes}</p>}
                           </div>
                         </div>
                       </CardContent>
@@ -381,8 +442,8 @@ export default function MoodTrackerPage() {
                         {getEntriesForSelectedDate().map((entry) => (
                           <div key={entry.id} className="border rounded-md p-4">
                             <div className="flex items-center gap-3 mb-2">
-                              <span className="text-xl">{getMoodEmoji(entry.mood)}</span>
-                              <span className="font-medium capitalize">{entry.mood}</span>
+                              <span className="text-xl">{getMoodEmoji(entry.mood_score)}</span>
+                              <span className="font-medium">{getMoodText(entry.mood_score)}</span>
                               <span className="text-xs text-muted-foreground ml-auto">
                                 {format(parseISO(entry.created_at), "h:mm a")}
                               </span>
@@ -453,9 +514,9 @@ export default function MoodTrackerPage() {
                         {totalMoods === 0
                           ? "Start logging your moods to see insights."
                           : `You've logged ${totalMoods} mood ${totalMoods === 1 ? "entry" : "entries"} in the last 30 days. 
-                          Your most frequent mood was ${
-                            Object.entries(moodDistribution).sort(([, a], [, b]) => b - a)[0][0]
-                          }.`}
+                         Your most frequent mood was ${
+                           Object.entries(moodDistribution).sort(([, a], [, b]) => b - a)[0][0]
+                         }.`}
                       </p>
                     </div>
                   </div>

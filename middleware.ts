@@ -15,6 +15,7 @@ const PROTECTED_ROUTES = [
   "/achievements",
   "/subscription",
   "/settings",
+  "/mind-visualizer",
 ]
 
 // Define admin-only routes
@@ -22,6 +23,9 @@ const ADMIN_ROUTES = ["/admin"]
 
 // Define routes that should redirect logged-in users
 const AUTH_ROUTES = ["/login", "/signup", "/reset-password"]
+
+// Define routes that allow limited demo/free access
+const FREEMIUM_ROUTES = ["/chat", "/mood", "/mood-tracker", "/self-care", "/meditations"]
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
@@ -55,16 +59,20 @@ export async function middleware(req: NextRequest) {
 
   // Check if the route requires authentication
   const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
+  const isFreemiumRoute = FREEMIUM_ROUTES.some((route) => pathname.startsWith(route))
   const isAdminRoute = ADMIN_ROUTES.some((route) => pathname.startsWith(route))
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route))
 
-  // Handle protected routes
-  if (isProtectedRoute && !session) {
+  // Handle protected routes (not freemium)
+  if (isProtectedRoute && !isFreemiumRoute && !session) {
     // Redirect to login page with return URL
     const redirectUrl = new URL("/login", req.url)
     redirectUrl.searchParams.set("redirect", pathname)
     return NextResponse.redirect(redirectUrl)
   }
+
+  // For freemium routes, we'll let the component handle the access limitations
+  // No need to redirect here
 
   // Handle admin routes
   if (isAdminRoute) {

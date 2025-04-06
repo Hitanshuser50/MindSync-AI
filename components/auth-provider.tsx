@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { supabase } from "@/lib/supabase"
 import type { User, Session } from "@supabase/supabase-js"
 import { useToast } from "@/components/ui/use-toast"
-import { useRouter } from "next/navigation"
 
 type AuthContextType = {
   user: User | null
@@ -31,7 +30,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
-  const router = useRouter()
 
   // Initialize auth state
   useEffect(() => {
@@ -78,27 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setIsLoading(false)
-
-      // Handle specific auth events
-      if (event === "SIGNED_IN") {
-        toast({
-          title: "Signed in successfully",
-          description: "Welcome back!",
-        })
-        router.refresh()
-      } else if (event === "SIGNED_OUT") {
-        toast({
-          title: "Signed out",
-          description: "You have been signed out successfully.",
-        })
-        router.refresh()
-      }
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [toast, router])
+  }, [toast])
 
   // Sign in with email and password
   const signIn = async (email: string, password: string) => {
@@ -142,7 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut()
-      router.push("/")
+      // Force a hard navigation to home page
+      window.location.href = "/"
     } catch (error) {
       console.error("Sign out error:", error)
       toast({
@@ -158,7 +142,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase.auth.refreshSession()
 
-      if (error) throw error
+      if (error) {
+        // If the error is about a missing session, handle it gracefully
+        if (error.message.includes("Auth session missing")) {
+          console.log("No active session to refresh")
+          return // Just return without throwing an error
+        }
+        throw error
+      }
 
       if (data.session) {
         setSession(data.session)
@@ -176,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut()
       setSession(null)
       setUser(null)
-      router.push("/login")
+      window.location.href = "/login"
     }
   }
 

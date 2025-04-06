@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,6 +10,11 @@ import { Search, Clock, Sparkles, Play, Bookmark, BookmarkCheck } from "lucide-r
 import { motion } from "framer-motion"
 import { usePremium } from "@/hooks/use-premium"
 import { useAuth } from "@/components/auth-provider"
+import { useRouter } from "next/navigation"
+
+// Import the usage limits hook and upgrade prompt
+import { useUsageLimits } from "@/hooks/use-usage-limits"
+import UpgradePrompt from "@/components/upgrade-prompt"
 
 // Types
 type Meditation = {
@@ -43,6 +47,19 @@ export default function MeditationsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState("all")
+
+  // Add the usage limits hook
+  const {
+    usageCount,
+    hasReachedLimit,
+    incrementUsage,
+    getRemainingUsage,
+    isAnonymous,
+    isPremium: hasPremium,
+  } = useUsageLimits("meditations")
+
+  // Add state to track if we should show the limit warning
+  const [showLimitWarning, setShowLimitWarning] = useState(false)
 
   useEffect(() => {
     fetchMeditations()
@@ -152,19 +169,33 @@ export default function MeditationsPage() {
   return (
     <div className="container py-8">
       <div className="max-w-6xl mx-auto">
+        {hasReachedLimit && showLimitWarning && (
+          <UpgradePrompt
+            type={isAnonymous ? "anonymous" : "free"}
+            feature="meditation sessions"
+            onClose={() => setShowLimitWarning(false)}
+          />
+        )}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold">Guided Meditations</h1>
             <p className="text-muted-foreground">Discover peace and mindfulness with our guided sessions</p>
           </div>
-          <div className="relative w-full md:w-auto">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search meditations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full md:w-[250px]"
-            />
+          <div className="flex items-center gap-4">
+            {!hasPremium && (
+              <div className="text-sm text-muted-foreground">
+                {getRemainingUsage()} session{getRemainingUsage() !== 1 ? "s" : ""} remaining
+              </div>
+            )}
+            <div className="relative w-full md:w-auto">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search meditations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-full md:w-[250px]"
+              />
+            </div>
           </div>
         </div>
 
@@ -226,10 +257,48 @@ function MeditationCard({
   isPremiumUser: boolean
   delay?: number
 }) {
+  const { hasReachedLimit, incrementUsage, isAnonymous } = useUsageLimits("meditations")
+  const [showLimit, setShowLimit] = useState(false)
+  const router = useRouter()
+
   // Format duration in minutes
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
     return `${minutes} min`
+  }
+
+  // Handle meditation start
+  const handleStartMeditation = () => {
+    // If it's premium content but user is not premium
+    if (meditation.is_premium && !isPremiumUser) {
+      router.push("/subscription")
+      return
+    }
+
+    // If free user has reached limit
+    if (hasReachedLimit && !isPremiumUser) {
+      setShowLimit(true)
+      return
+    }
+
+    // Otherwise, increment usage and navigate
+    if (!isPremiumUser) {
+      incrementUsage()
+    }
+    router.push(`/meditations/${meditation.id}`)
+  }
+
+  // If limit warning is showing
+  if (showLimit) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay }}>
+        <UpgradePrompt
+          type={isAnonymous ? "anonymous" : "free"}
+          feature="meditation sessions"
+          onClose={() => setShowLimit(false)}
+        />
+      </motion.div>
+    )
   }
 
   return (
@@ -277,25 +346,24 @@ function MeditationCard({
           </div>
         </CardContent>
         <CardFooter className="p-4 pt-0">
-          <Link href={`/meditations/${meditation.id}`} className="w-full">
-            <Button
-              className="w-full gap-2"
-              variant={meditation.is_premium && !isPremiumUser ? "outline" : "default"}
-              disabled={meditation.is_premium && !isPremiumUser}
-            >
-              {meditation.is_premium && !isPremiumUser ? (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Unlock with Premium
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Play Meditation
-                </>
-              )}
-            </Button>
-          </Link>
+          <Button
+            className="w-full gap-2"
+            variant={meditation.is_premium && !isPremiumUser ? "outline" : "default"}
+            disabled={meditation.is_premium && !isPremiumUser}
+            onClick={handleStartMeditation}
+          >
+            {meditation.is_premium && !isPremiumUser ? (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Unlock with Premium
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Play Meditation
+              </>
+            )}
+          </Button>
         </CardFooter>
       </Card>
     </motion.div>

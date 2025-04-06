@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/components/auth-provider"
-import { usePremium } from "@/hooks/use-premium"
 import {
   Menu,
   X,
@@ -18,8 +17,8 @@ import {
   User,
   LogOut,
   LogIn,
-  Sparkles,
   Settings,
+  Brain,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
@@ -39,13 +38,13 @@ const navItems = [
   { name: "Chat", href: "/chat", icon: MessageCircle },
   { name: "Mood Tracker", href: "/mood", icon: BarChart2 },
   { name: "Self-Care", href: "/self-care", icon: BookOpen },
+  { name: "Mind Visualizer", href: "/mind-visualizer", icon: Brain },
   { name: "Emergency", href: "/emergency", icon: Phone },
 ]
 
 export default function Navbar() {
   const pathname = usePathname()
   const { user, isLoading: authLoading } = useAuth()
-  const { isPremium } = usePremium()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -84,7 +83,7 @@ export default function Navbar() {
               transition={{ duration: 0.3 }}
             >
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground">
-                <Sparkles className="h-4 w-4" />
+                <Brain className="h-4 w-4" />
               </div>
             </motion.div>
             <motion.span
@@ -130,13 +129,6 @@ export default function Navbar() {
 
         {/* User Menu or Auth Buttons */}
         <div className="flex items-center gap-2">
-          {isPremium && (
-            <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-              <Sparkles className="h-3 w-3" />
-              <span>Premium</span>
-            </div>
-          )}
-
           {!authLoading && (
             <>
               {user ? (
@@ -156,12 +148,6 @@ export default function Navbar() {
                       <Link href="/profile" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
                         <span>Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/subscription" className="cursor-pointer">
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        <span>Subscription</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -194,111 +180,101 @@ export default function Navbar() {
           )}
 
           {/* Mobile Menu Trigger */}
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[80vw] sm:w-[350px] pr-0">
-              <div className="flex flex-col gap-6 px-2">
-                <div className="flex items-center justify-between">
-                  <Link href="/" className="flex items-center gap-2">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground">
-                      <Sparkles className="h-4 w-4" />
-                    </div>
-                    <span className="font-bold text-lg">MindfulMe</span>
-                  </Link>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <X className="h-5 w-5" />
-                      <span className="sr-only">Close menu</span>
-                    </Button>
-                  </SheetTrigger>
-                </div>
+          <div className="flex md:hidden items-center gap-4">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Toggle Menu" onClick={() => setIsMobileMenuOpen(true)}>
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[80vw] sm:w-[350px] pr-0">
+                <div className="flex flex-col gap-6 px-2">
+                  <div className="flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground">
+                        <Brain className="h-4 w-4" />
+                      </div>
+                      <span className="font-bold text-lg">MindfulMe</span>
+                    </Link>
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <X className="h-5 w-5" />
+                        <span className="sr-only">Close menu</span>
+                      </Button>
+                    </SheetTrigger>
+                  </div>
 
-                <nav className="flex flex-col gap-1">
-                  {navItems.map((item) => {
-                    const isActive = pathname === item.href
-                    const Icon = item.icon
+                  <nav className="flex flex-col gap-1">
+                    {navItems.map((item) => {
+                      const isActive = pathname === item.href
+                      const Icon = item.icon
 
-                    return (
-                      <Link key={item.href} href={item.href}>
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            "w-full justify-start gap-3 px-3 py-6",
-                            isActive ? "bg-muted text-primary" : "text-muted-foreground",
-                          )}
-                        >
-                          <Icon className="h-5 w-5" />
-                          <span>{item.name}</span>
+                      return (
+                        <Link key={item.href} href={item.href}>
+                          <Button
+                            variant="ghost"
+                            className={cn(
+                              "w-full justify-start gap-3 px-3 py-6",
+                              isActive ? "bg-muted text-primary" : "text-muted-foreground",
+                            )}
+                          >
+                            <Icon className="h-5 w-5" />
+                            <span>{item.name}</span>
+                          </Button>
+                        </Link>
+                      )
+                    })}
+                  </nav>
+
+                  {user ? (
+                    <div className="flex flex-col gap-2 mt-4">
+                      <div className="flex items-center gap-3 px-3 py-2">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src="/placeholder.svg?height=40&width=40" alt={user.email || "User"} />
+                          <AvatarFallback>{user.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.email}</span>
+                        </div>
+                      </div>
+                      <Link href="/profile">
+                        <Button variant="ghost" className="w-full justify-start gap-3">
+                          <User className="h-5 w-5" />
+                          <span>Profile</span>
                         </Button>
                       </Link>
-                    )
-                  })}
-                </nav>
-
-                {user ? (
-                  <div className="flex flex-col gap-2 mt-4">
-                    <div className="flex items-center gap-3 px-3 py-2">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src="/placeholder.svg?height=40&width=40" alt={user.email || "User"} />
-                        <AvatarFallback>{user.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{user.email}</span>
-                        {isPremium && (
-                          <div className="flex items-center gap-1 text-primary text-xs">
-                            <Sparkles className="h-3 w-3" />
-                            <span>Premium Member</span>
-                          </div>
-                        )}
-                      </div>
+                      <Link href="/settings">
+                        <Button variant="ghost" className="w-full justify-start gap-3">
+                          <Settings className="h-5 w-5" />
+                          <span>Settings</span>
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-3 text-destructive hover:text-destructive"
+                        onClick={handleSignOut}
+                      >
+                        <LogOut className="h-5 w-5" />
+                        <span>Log out</span>
+                      </Button>
                     </div>
-                    <Link href="/profile">
-                      <Button variant="ghost" className="w-full justify-start gap-3">
-                        <User className="h-5 w-5" />
-                        <span>Profile</span>
-                      </Button>
-                    </Link>
-                    <Link href="/subscription">
-                      <Button variant="ghost" className="w-full justify-start gap-3">
-                        <Sparkles className="h-5 w-5" />
-                        <span>Subscription</span>
-                      </Button>
-                    </Link>
-                    <Link href="/settings">
-                      <Button variant="ghost" className="w-full justify-start gap-3">
-                        <Settings className="h-5 w-5" />
-                        <span>Settings</span>
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3 text-destructive hover:text-destructive"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="h-5 w-5" />
-                      <span>Log out</span>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 mt-4">
-                    <Link href="/login">
-                      <Button variant="outline" className="w-full">
-                        Log in
-                      </Button>
-                    </Link>
-                    <Link href="/signup">
-                      <Button className="w-full">Sign up</Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
+                  ) : (
+                    <div className="flex flex-col gap-2 mt-4">
+                      <Link href="/login">
+                        <Button variant="outline" className="w-full">
+                          Log in
+                        </Button>
+                      </Link>
+                      <Link href="/signup">
+                        <Button className="w-full">Sign up</Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
     </header>

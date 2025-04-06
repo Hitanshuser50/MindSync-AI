@@ -25,6 +25,8 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { getUserChatHistory, clearChatHistory, saveChatMessage } from "@/app/actions/chat-actions"
 import { usePremium } from "@/hooks/use-premium"
+import { useUsageLimits } from "@/hooks/use-usage-limits"
+import UpgradePrompt from "@/components/upgrade-prompt"
 
 type Message = {
   role: "user" | "assistant"
@@ -50,6 +52,17 @@ export default function ChatPage() {
   const { toast } = useToast()
   const { isPremium } = usePremium()
 
+  const {
+    usageCount,
+    hasReachedLimit,
+    incrementUsage,
+    getRemainingUsage,
+    isAnonymous,
+    isPremium: isPremiumUser,
+  } = useUsageLimits("chat")
+
+  const [showLimitWarning, setShowLimitWarning] = useState(false)
+
   // Load chat history for authenticated users
   useEffect(() => {
     if (user) {
@@ -66,22 +79,36 @@ export default function ChatPage() {
 
   const loadChatHistory = async () => {
     try {
-      // Ensure session is valid before proceeding
-      await refreshSession()
+      // Check if user exists before trying to refresh session
+      if (!user) {
+        console.log("No user, skipping chat history load")
+        return
+      }
 
-      const history = await getUserChatHistory()
+      // Try to refresh session, but don't throw if it fails
+      try {
+        await refreshSession()
+      } catch (error) {
+        console.log("Session refresh failed, continuing as guest")
+        // Continue execution even if refresh fails
+      }
 
-      if (history && history.length > 0) {
-        // Convert to Message format and reverse to get chronological order
-        const formattedHistory = history
-          .map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-            language: msg.language || "en",
-          }))
-          .reverse()
+      // Only try to get history if we still have a user after refresh attempt
+      if (user) {
+        const history = await getUserChatHistory()
 
-        setMessages(formattedHistory)
+        if (history && history.length > 0) {
+          // Convert to Message format and reverse to get chronological order
+          const formattedHistory = history
+            .map((msg) => ({
+              role: msg.role,
+              content: msg.content,
+              language: msg.language || "en",
+            }))
+            .reverse()
+
+          setMessages(formattedHistory)
+        }
       }
     } catch (error) {
       console.error("Error loading chat history:", error)
@@ -128,6 +155,12 @@ export default function ChatPage() {
     e.preventDefault()
     if (!input.trim()) return
 
+    // Check usage limits
+    if (hasReachedLimit) {
+      setShowLimitWarning(true)
+      return
+    }
+
     // Add user message
     const userMessage: Message = { role: "user", content: input, language }
     setMessages((prev) => [...prev, userMessage])
@@ -135,6 +168,9 @@ export default function ChatPage() {
     setIsLoading(true)
 
     try {
+      // Increment usage count
+      incrementUsage()
+
       // Ensure session is valid before proceeding
       if (user) {
         await refreshSession()
@@ -226,6 +262,19 @@ export default function ChatPage() {
     )
   }
 
+  if (hasReachedLimit && showLimitWarning) {
+    return (
+      <div className="container max-w-4xl py-8">
+        <UpgradePrompt
+          type={isAnonymous ? "anonymous" : "free"}
+          feature="chat sessions"
+          onClose={() => setShowLimitWarning(false)}
+        />
+        <Card className="border-none shadow-none">{/* Rest of your chat UI */}</Card>
+      </div>
+    )
+  }
+
   return (
     <div className="container max-w-4xl py-8">
       <Card className="border-none shadow-none">
@@ -233,6 +282,11 @@ export default function ChatPage() {
           <div className="flex flex-col h-[70vh]">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-xl font-semibold">Mindful Chat</h2>
+              {!isPremium && (
+                <div className="text-xs text-muted-foreground mr-4">
+                  {getRemainingUsage()} message{getRemainingUsage() !== 1 ? "s" : ""} remaining
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

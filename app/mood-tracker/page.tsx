@@ -33,6 +33,7 @@ import {
 
 type MoodEntry = {
   id: string
+  user_id: string
   mood_score: number
   notes: string | null
   created_at: string
@@ -95,6 +96,7 @@ export default function MoodTrackerPage() {
       return
     }
 
+    // Only check authentication for non-anonymous flows
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -114,7 +116,7 @@ export default function MoodTrackerPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          mood_score: moodScore,
+          mood_score: moodScore, // Make sure we're using mood_score, not mood
           notes: notes || null,
         }),
       })
@@ -167,7 +169,7 @@ export default function MoodTrackerPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          mood_score: editMoodScore,
+          mood_score: editMoodScore, // Make sure we're using mood_score, not mood
           notes: editNotes || null,
         }),
       })

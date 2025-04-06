@@ -10,9 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { Mail, Lock, Loader2, AlertCircle } from "lucide-react"
-import { FcGoogle } from "react-icons/fc"
 import { motion } from "framer-motion"
-import { signInWithEmail, signInWithGoogle } from "@/lib/auth-helpers"
+import { signInWithEmail } from "@/lib/auth-helpers"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -27,32 +26,26 @@ export default function LoginPage() {
     setError(null)
     setIsLoading(true)
 
-    const result = await signInWithEmail(email, password)
+    try {
+      const result = await signInWithEmail(email, password)
 
-    if (result.success) {
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      })
-      router.push("/dashboard")
-      router.refresh()
-    } else {
-      setError(result.error)
+      if (result.success) {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully logged in.",
+        })
+
+        // Force a hard navigation to dashboard to avoid client-side routing issues
+        window.location.href = "/dashboard"
+      } else {
+        setError(result.error || "Login failed. Please check your credentials.")
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      setError("An unexpected error occurred. Please try again.")
       setIsLoading(false)
     }
-  }
-
-  const handleGoogleLogin = async () => {
-    setError(null)
-    setIsLoading(true)
-
-    const result = await signInWithGoogle()
-
-    if (!result.success) {
-      setError(result.error)
-      setIsLoading(false)
-    }
-    // No need to handle success case as it redirects
   }
 
   return (
@@ -63,26 +56,12 @@ export default function LoginPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card>
+        <Card className="border-primary/10 shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
             <CardDescription className="text-center">Sign in to continue your mental health journey</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
-              <FcGoogle className="mr-2 h-5 w-5" />
-              Continue with Google
-            </Button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
-              </div>
-            </div>
-
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div className="space-y-2">
                 <div className="relative">

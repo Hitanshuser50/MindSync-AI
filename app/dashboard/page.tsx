@@ -3,119 +3,39 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
+import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/components/auth-provider"
-import { usePremium } from "@/hooks/use-premium"
-import { MessageCircle, BarChart2, Calendar, Flame, Star, Brain, Sparkles, LineChart, CheckCircle } from "lucide-react"
+import { MessageCircle, BarChart2, BookOpen, Phone, Brain, Sparkles } from "lucide-react"
 import { motion } from "framer-motion"
+import Link from "next/link"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user } = useAuth()
-  const { isPremium } = usePremium()
-  const { toast } = useToast()
-
-  const [isLoading, setIsLoading] = useState(true)
-  const [userData, setUserData] = useState<any>(null)
+  const { user, isLoading } = useAuth()
   const [greeting, setGreeting] = useState("")
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    if (!user) {
-      router.push("/login")
-      return
-    }
-
-    fetchUserData()
+    setMounted(true)
     setGreeting(getGreeting())
-  }, [user, router])
+  }, [])
 
-  const fetchUserData = async () => {
-    try {
-      setIsLoading(true)
-
-      // In a real app, this would fetch from your database
-      // For now, we'll use placeholder data
-      setTimeout(() => {
-        setUserData({
-          name: user?.user_metadata?.name || "Friend",
-          streak: 14,
-          points: 1250,
-          level: 5,
-          todayMood: null,
-          completedMeditations: 28,
-          totalMeditationMinutes: 240,
-          moodEntries: 42,
-          recentMeditations: [
-            {
-              id: "med1",
-              title: "Deep Sleep Relaxation",
-              duration: 15,
-              completedAt: new Date(Date.now() - 86400000).toISOString(), // yesterday
-            },
-            {
-              id: "med6",
-              title: "Bedtime Story Meditation",
-              duration: 30,
-              completedAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-            },
-          ],
-          suggestedMeditations: [
-            {
-              id: "med2",
-              title: "Anxiety Relief Breathing",
-              duration: 10,
-              category: "anxiety",
-            },
-            {
-              id: "med3",
-              title: "Morning Energy Boost",
-              duration: 5,
-              category: "focus",
-            },
-          ],
-        })
-        setIsLoading(false)
-      }, 1000)
-    } catch (error) {
-      console.error("Error fetching user data:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load your dashboard. Please try again.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
+  useEffect(() => {
+    // Only run this check after component has mounted to avoid hydration issues
+    if (mounted && !isLoading && !user) {
+      router.push("/login")
     }
-  }
+  }, [user, isLoading, router, mounted])
 
   const getGreeting = () => {
     const hour = new Date().getHours()
-
-    if (hour < 12) {
-      return "Good morning"
-    } else if (hour < 18) {
-      return "Good afternoon"
-    } else {
-      return "Good evening"
-    }
+    if (hour < 12) return "Good morning"
+    if (hour < 18) return "Good afternoon"
+    return "Good evening"
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const yesterday = new Date(now)
-    yesterday.setDate(yesterday.getDate() - 1)
-
-    if (date.toDateString() === now.toDateString()) {
-      return "Today"
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday"
-    } else {
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    }
-  }
-
-  if (isLoading) {
+  // Show loading state while checking authentication
+  if (isLoading || !mounted || !user) {
     return (
       <div className="container flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -136,337 +56,166 @@ export default function DashboardPage() {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold">
-            {greeting}, {userData.name}!
+            {greeting}, {user?.user_metadata?.name || "Friend"}!
           </h1>
-          <p className="text-muted-foreground">
-            {userData.todayMood ? `You're feeling ${userData.todayMood} today.` : "How are you feeling today?"}
-          </p>
+          <p className="text-muted-foreground">Welcome to your mental wellness dashboard. How are you feeling today?</p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-orange-500" />
-                  Current Streak
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userData.streak} days</div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Star className="h-4 w-4 text-amber-500" />
-                  Points
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userData.points}</div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-primary" />
-                  Meditations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userData.completedMeditations}</div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <BarChart2 className="h-4 w-4 text-blue-500" />
-                  Mood Entries
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userData.moodEntries}</div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <QuickStatCard
+            icon={<MessageCircle className="h-10 w-10 text-blue-500" />}
+            title="Chat Sessions"
+            value="5"
+            subtitle="Last 7 days"
+            delay={0.1}
+          />
+          <QuickStatCard
+            icon={<BarChart2 className="h-10 w-10 text-green-500" />}
+            title="Mood Score"
+            value="7.5"
+            subtitle="Weekly average"
+            delay={0.2}
+          />
+          <QuickStatCard
+            icon={<Brain className="h-10 w-10 text-purple-500" />}
+            title="Meditation"
+            value="45"
+            subtitle="Minutes this week"
+            delay={0.3}
+          />
+          <QuickStatCard
+            icon={<Sparkles className="h-10 w-10 text-amber-500" />}
+            title="Streak"
+            value="12"
+            subtitle="Days in a row"
+            delay={0.4}
+          />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            className="lg:col-span-2"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Start your wellness journey</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <Button
-                    variant="outline"
-                    className="h-auto flex flex-col items-center justify-center gap-2 p-4"
-                    onClick={() => router.push("/chat")}
-                  >
-                    <MessageCircle className="h-8 w-8 text-primary" />
-                    <span>Chat Now</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="h-auto flex flex-col items-center justify-center gap-2 p-4"
-                    onClick={() => router.push("/mood")}
-                  >
-                    <BarChart2 className="h-8 w-8 text-blue-500" />
-                    <span>Log Mood</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="h-auto flex flex-col items-center justify-center gap-2 p-4"
-                    onClick={() => router.push("/meditations")}
-                  >
-                    <Brain className="h-8 w-8 text-violet-500" />
-                    <span>Meditate</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="h-auto flex flex-col items-center justify-center gap-2 p-4"
-                    onClick={() => router.push("/insights")}
-                  >
-                    <LineChart className="h-8 w-8 text-green-500" />
-                    <span>Insights</span>
-                  </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-100 dark:border-blue-900/50">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full">
+                  <MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                <div>
+                  <h3 className="text-lg font-medium">Continue your conversation</h3>
+                  <p className="text-sm text-muted-foreground">Pick up where you left off</p>
+                </div>
+              </div>
+              <Link href="/chat">
+                <Button className="w-full">Open Chat</Button>
+              </Link>
+            </CardContent>
+          </Card>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-          >
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle>Today's Goal</CardTitle>
-                <CardDescription>Keep your streak going</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center h-[calc(100%-8rem)]">
-                {userData.todayMood ? (
-                  <div className="text-center">
-                    <div className="inline-flex items-center justify-center p-2 bg-green-100 dark:bg-green-900/30 rounded-full mb-4">
-                      <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <h3 className="text-xl font-medium mb-2">Goal Completed!</h3>
-                    <p className="text-sm text-muted-foreground">You've logged your mood today. Great job!</p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <div className="inline-flex items-center justify-center p-2 bg-primary/10 rounded-full mb-4">
-                      <Calendar className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="text-xl font-medium mb-2">Log Your Mood</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Track how you're feeling to maintain your {userData.streak}-day streak
-                    </p>
-                    <Button onClick={() => router.push("/mood")}>Log Mood Now</Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+          <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-purple-100 dark:border-purple-900/50">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full">
+                  <Brain className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium">Try a meditation</h3>
+                  <p className="text-sm text-muted-foreground">Relax and center yourself</p>
+                </div>
+              </div>
+              <Link href="/self-care">
+                <Button className="w-full">Explore Meditations</Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-          >
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Your latest wellness activities</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {userData.recentMeditations.length > 0 ? (
-                  <div className="space-y-4">
-                    {userData.recentMeditations.map((meditation: any) => (
-                      <div key={meditation.id} className="flex items-start gap-4">
-                        <div className="p-2 bg-primary/10 rounded-md">
-                          <Brain className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center">
-                            <h4 className="font-medium">{meditation.title}</h4>
-                            <span className="text-xs text-muted-foreground">{formatDate(meditation.completedAt)}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{meditation.duration} min meditation</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground mb-4">
-                      No recent activity found. Start your wellness journey today!
-                    </p>
-                    <Button variant="outline" onClick={() => router.push("/meditations")}>
-                      Explore Meditations
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full" onClick={() => router.push("/achievements")}>
-                  View All Activity
-                </Button>
-              </CardFooter>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
-          >
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle>Recommended for You</CardTitle>
-                <CardDescription>Personalized suggestions based on your activity</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {userData.suggestedMeditations.map((meditation: any) => (
-                    <div key={meditation.id} className="flex items-start gap-4">
-                      <div className="p-2 bg-primary/10 rounded-md">
-                        <Brain className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">{meditation.title}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {meditation.duration} min • {meditation.category}
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => router.push(`/meditations/${meditation.id}`)}>
-                        Start
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full" onClick={() => router.push("/meditations")}>
-                  View All Meditations
-                </Button>
-              </CardFooter>
-            </Card>
-          </motion.div>
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <QuickActionButton
+              icon={<MessageCircle className="h-8 w-8 text-primary" />}
+              label="Chat Now"
+              href="/chat"
+              delay={0.1}
+            />
+            <QuickActionButton
+              icon={<BarChart2 className="h-8 w-8 text-blue-500" />}
+              label="Log Mood"
+              href="/mood"
+              delay={0.2}
+            />
+            <QuickActionButton
+              icon={<BookOpen className="h-8 w-8 text-violet-500" />}
+              label="Self-Care"
+              href="/self-care"
+              delay={0.3}
+            />
+            <QuickActionButton
+              icon={<Phone className="h-8 w-8 text-green-500" />}
+              label="Get Help"
+              href="/emergency"
+              delay={0.4}
+            />
+          </div>
         </div>
 
-        {!isPremium && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.9 }}
-          >
-            <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                  <div className="md:w-2/3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      <h3 className="text-xl font-bold">Upgrade to Premium</h3>
-                    </div>
-                    <p className="text-muted-foreground mb-4">
-                      Unlock advanced insights, premium meditations, and personalized recommendations to enhance your
-                      mental wellbeing journey.
-                    </p>
-                    <div className="flex flex-wrap gap-3 mb-4">
-                      <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                        Advanced AI Insights
-                      </div>
-                      <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                        Premium Meditations
-                      </div>
-                      <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                        Unlimited Chat
-                      </div>
-                      <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                        Exclusive Rewards
-                      </div>
-                    </div>
-                    <Button className="gap-2" onClick={() => router.push("/subscription")}>
-                      <Sparkles className="h-4 w-4" />
-                      Upgrade Now
-                    </Button>
-                  </div>
-                  <div className="md:w-1/3 flex justify-center">
-                    <div className="bg-primary/5 p-4 rounded-lg border border-primary/10">
-                      <div className="text-center mb-4">
-                        <h4 className="font-bold text-lg">Premium Plan</h4>
-                        <div className="flex items-center justify-center">
-                          <span className="text-3xl font-bold">₹499</span>
-                          <span className="text-sm text-muted-foreground ml-1">/month</span>
-                        </div>
-                      </div>
-                      <ul className="space-y-2 mb-4">
-                        <li className="flex items-center text-sm">
-                          <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                          <span>Unlimited AI therapy sessions</span>
-                        </li>
-                        <li className="flex items-center text-sm">
-                          <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                          <span>All premium meditations</span>
-                        </li>
-                        <li className="flex items-center text-sm">
-                          <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                          <span>Advanced insights & analytics</span>
-                        </li>
-                        <li className="flex items-center text-sm">
-                          <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                          <span>Priority support</span>
-                        </li>
-                      </ul>
-                    </div>
+        <Link href="/mind-visualizer">
+          <Card className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-950/30 dark:to-pink-950/30 border-indigo-100 dark:border-indigo-900/50 hover:shadow-md transition-all">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="relative w-full md:w-1/3 aspect-square max-w-[200px]">
+                  <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-2 bg-purple-500/20 rounded-full animate-pulse [animation-delay:250ms]"></div>
+                  <div className="absolute inset-4 bg-pink-500/20 rounded-full animate-pulse [animation-delay:500ms]"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Brain className="h-16 w-16 text-indigo-600 dark:text-indigo-400" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+                <div className="md:w-2/3 text-center md:text-left">
+                  <h2 className="text-2xl font-bold mb-2">Explore Your Mind</h2>
+                  <p className="text-muted-foreground mb-4">
+                    Discover our interactive mind visualizer with engaging activities to understand how your brain
+                    works.
+                  </p>
+                  <Button>Launch Mind Visualizer</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
+  )
+}
+
+function QuickStatCard({ icon, title, value, subtitle, delay = 0 }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay }}>
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
+              <p className="text-3xl font-bold">{value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+            </div>
+            <div className="p-2 bg-primary/10 rounded-full">{icon}</div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+function QuickActionButton({ icon, label, href, delay = 0 }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay }}>
+      <Link href={href}>
+        <Button variant="outline" className="h-auto flex flex-col items-center justify-center gap-2 p-4 w-full">
+          {icon}
+          <span>{label}</span>
+        </Button>
+      </Link>
+    </motion.div>
   )
 }
 
